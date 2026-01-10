@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Calendar } from 'lucide-react';
-import { addDays, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { X, Calendar, CheckCircle2, RotateCcw, AlertCircle } from 'lucide-react';
+import { addDays, addMonths, addYears, startOfMonth, endOfMonth, isWithinInterval, parseISO, isBefore, startOfDay } from 'date-fns';
 import Database from '@tauri-apps/plugin-sql';
+import { cn } from './lib/utils'; // Assuming cn utility is available
 
 // Types
-import { Category, Event } from './types';
+import { Category, Event, EventStatus } from './types';
 
 // Components
 import { Sidebar } from './components/Sidebar';
@@ -19,6 +20,7 @@ import { DeleteConfirmationModal } from './components/DeleteConfirmationModal';
 export default function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'inprogress' | 'completed'>('upcoming');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
@@ -39,10 +41,11 @@ export default function App() {
           { id: 3, name: "Salud", color: "#10b981" }
         ]);
         setEvents([
-          { id: 1, category_id: 1, title: "Presentación de Proyecto", description: "Entregar el informe final del trimestre detallando cada una de las fases del desarrollo y los resultados obtenidos en las pruebas de usuario.", event_date: addDays(new Date(), 2).toISOString().split('T')[0] },
-          { id: 2, category_id: 2, title: "Almuerzo con Familia", description: "Reservar mesa en el restaurante de pastas que le gusta a la abuela.", event_date: addDays(new Date(), 5).toISOString().split('T')[0] },
-          { id: 3, category_id: 3, title: "Cita Médica", description: "Control anual con el cardiólogo.", event_date: new Date().toISOString().split('T')[0] },
-          { id: 4, category_id: 1, title: "Reunión de Equipo", description: "Planificar siguiente sprint y revisar backlog.", event_date: addDays(new Date(), -2).toISOString().split('T')[0] }
+          { id: 1, category_id: 1, title: "Presentación de Proyecto", description: "Entregar el informe final...", event_date: addDays(new Date(), 2).toISOString().split('T')[0], status: 'normal' },
+          { id: 2, category_id: 2, title: "Almuerzo con Familia", description: "Reservar mesa...", event_date: addDays(new Date(), 5).toISOString().split('T')[0], status: 'normal' },
+          { id: 3, category_id: 3, title: "Cita Médica", description: "Control anual...", event_date: new Date().toISOString().split('T')[0], status: 'pending' },
+          { id: 4, category_id: 1, title: "Reunión de Equipo", description: "Planificar...", event_date: addDays(new Date(), -2).toISOString().split('T')[0], status: 'completed' },
+          { id: 5, category_id: 2, title: "Evento Desactivado", description: "No debería verse en dashboard", event_date: addDays(new Date(), 1).toISOString().split('T')[0], status: 'deactivated' }
         ]);
         return;
       }
@@ -65,6 +68,7 @@ export default function App() {
             title TEXT NOT NULL,
             description TEXT,
             event_date TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'normal',
             FOREIGN KEY(category_id) REFERENCES categories(id)
           );
         `);
@@ -80,10 +84,39 @@ export default function App() {
   async function loadData(_db: any) {
     if (!_db) return;
     const cats = await _db.select("SELECT * FROM categories");
-    const evts = await _db.select("SELECT * FROM events ORDER BY event_date ASC");
+    const evts = await _db.select("SELECT * FROM events ORDER BY event_date ASC") as Event[];
+
+    // Automatic status update: if status is normal and date is today or before, change to pending
+    const today = startOfDay(new Date());
+    let updatedNeeded = false;
+    const updatedEvents = evts.map(e => {
+      const eDate = parseISO(e.event_date);
+      if (e.status === 'normal' && isBefore(eDate, today)) {
+        updatedNeeded = true;
+        return { ...e, status: 'pending' as EventStatus };
+      }
+      return e;
+    });
+
+    if (updatedNeeded) {
+      for (const e of updatedEvents) {
+        if (e.status === 'pending' && evts.find(old => old.id === e.id)?.status === 'normal') {
+          await _db.execute("UPDATE events SET status = 'pending' WHERE id = ?", [e.id]);
+        }
+      }
+    }
+
     setCategories(cats);
-    setEvents(evts);
+    setEvents(updatedEvents);
   }
+
+  // Helper to determine status based on date
+  const calculateStatus = (dateStr: string, isDeactivated: boolean): EventStatus => {
+    if (isDeactivated) return 'deactivated';
+    const today = startOfDay(new Date());
+    const eDate = parseISO(dateStr);
+    return isBefore(eDate, today) ? 'pending' : 'normal';
+  };
 
   // Logic & Sorting
   const sortedEvents = useMemo(() => {
@@ -91,31 +124,54 @@ export default function App() {
   }, [events]);
 
   const upcomingEvents = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    return sortedEvents.filter(e => e.event_date >= today);
+    return sortedEvents.filter(e => e.status === 'normal' || e.status === 'deactivated');
   }, [sortedEvents]);
 
-  const nextEvent = upcomingEvents[0];
+  const inProgressEvents = useMemo(() => {
+    return sortedEvents.filter(e => e.status === 'pending');
+  }, [sortedEvents]);
+
+  const completedEvents = useMemo(() => {
+    return sortedEvents.filter(e => e.status === 'completed');
+  }, [sortedEvents]);
+
+  // Dashboard calculations (only normal events)
+  const dashboardEvents = useMemo(() => sortedEvents.filter(e => e.status === 'normal'), [sortedEvents]);
+
+  const nextUpcomingEvents = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return dashboardEvents.filter(e => e.event_date >= today);
+  }, [dashboardEvents]);
+
+  const nextEvent = nextUpcomingEvents[0];
 
   const currentMonthEvents = useMemo(() => {
     const start = startOfMonth(new Date());
     const end = endOfMonth(new Date());
-    return sortedEvents.filter(e => {
+    return dashboardEvents.filter(e => {
       const date = parseISO(e.event_date);
       return isWithinInterval(date, { start, end });
     });
-  }, [sortedEvents]);
+  }, [dashboardEvents]);
+
+  const currentTabEvents = useMemo(() => {
+    let filtered: Event[] = [];
+    if (activeTab === 'upcoming') filtered = upcomingEvents;
+    else if (activeTab === 'inprogress') filtered = inProgressEvents;
+    else if (activeTab === 'completed') filtered = completedEvents;
+
+    if (selectedCategory) {
+      filtered = filtered.filter(e => e.category_id === selectedCategory);
+    }
+    return filtered;
+  }, [activeTab, upcomingEvents, inProgressEvents, completedEvents, selectedCategory]);
 
   const groupedEvents = useMemo(() => {
-    const filtered = selectedCategory
-      ? sortedEvents.filter(e => e.category_id === selectedCategory)
-      : sortedEvents;
-
     return categories.map(cat => ({
       category: cat,
-      events: filtered.filter(e => e.category_id === cat.id)
+      events: currentTabEvents.filter(e => e.category_id === cat.id)
     })).filter(group => group.events.length > 0);
-  }, [sortedEvents, categories, selectedCategory]);
+  }, [currentTabEvents, categories]);
 
   // Actions
   const handleSaveCategory = async (name: string, color: string) => {
@@ -129,28 +185,73 @@ export default function App() {
   };
 
   const handleSaveEvent = async (evt: any) => {
+    // Determine new status based on date if it's not completed or deactivated explicitly
+    let newStatus = evt.status;
+    if (newStatus !== 'completed' && newStatus !== 'deactivated') {
+      newStatus = calculateStatus(evt.event_date, false);
+    }
+
     if (db) {
       if (editingEvent) {
         await db.execute(
-          "UPDATE events SET category_id = ?, title = ?, description = ?, event_date = ? WHERE id = ?",
-          [evt.category_id, evt.title, evt.description, evt.event_date, editingEvent.id]
+          "UPDATE events SET category_id = ?, title = ?, description = ?, event_date = ?, status = ? WHERE id = ?",
+          [evt.category_id, evt.title, evt.description, evt.event_date, newStatus, editingEvent.id]
         );
       } else {
         await db.execute(
-          "INSERT INTO events (category_id, title, description, event_date) VALUES (?, ?, ?, ?)",
-          [evt.category_id, evt.title, evt.description, evt.event_date]
+          "INSERT INTO events (category_id, title, description, event_date, status) VALUES (?, ?, ?, ?, ?)",
+          [evt.category_id, evt.title, evt.description, evt.event_date, newStatus]
         );
       }
       loadData(db);
     } else {
       if (editingEvent) {
-        setEvents(events.map(e => e.id === editingEvent.id ? { ...evt, id: e.id } : e));
+        setEvents(events.map(e => e.id === editingEvent.id ? { ...evt, id: e.id, status: newStatus } : e));
       } else {
-        setEvents([...events, { ...evt, id: Date.now() }]);
+        setEvents([...events, { ...evt, id: Date.now(), status: newStatus }]);
       }
     }
     setIsAddEventOpen(false);
     setEditingEvent(null);
+  };
+
+  const handleUpdateStatus = async (eventId: number, status: EventStatus) => {
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+
+    let finalStatus = status;
+    // If reactivating or activating, recalculate based on date
+    if (status === 'normal') {
+      finalStatus = calculateStatus(event.event_date, false);
+    }
+
+    if (db) {
+      await db.execute("UPDATE events SET status = ? WHERE id = ?", [finalStatus, eventId]);
+      loadData(db);
+    } else {
+      setEvents(events.map(e => e.id === eventId ? { ...e, status: finalStatus } : e));
+    }
+    setViewingEvent(null);
+  };
+
+  const handlePostpone = async (eventId: number, type: 'month' | 'year') => {
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+
+    const oldDate = parseISO(event.event_date);
+    const newDate = type === 'month' ? addMonths(oldDate, 1) : addYears(oldDate, 1);
+    const newDateStr = newDate.toISOString().split('T')[0];
+
+    // After postpone, recalculate status (it might still be pending if postponed date is still past, though unlikely)
+    const newStatus = calculateStatus(newDateStr, false);
+
+    if (db) {
+      await db.execute("UPDATE events SET event_date = ?, status = ? WHERE id = ?", [newDateStr, newStatus, eventId]);
+      loadData(db);
+    } else {
+      setEvents(events.map(e => e.id === eventId ? { ...e, event_date: newDateStr, status: newStatus } : e));
+    }
+    setViewingEvent(null);
   };
 
   const handleDeleteEvent = async () => {
@@ -183,21 +284,59 @@ export default function App() {
           setIsSidebarLocked={setIsSidebarLocked}
         />
 
-        <div className="flex-1 overflow-y-auto p-10 space-y-12">
+        <div className="flex-1 overflow-y-auto p-10 space-y-12 no-scrollbar">
           <Dashboard
             nextEvent={nextEvent}
             currentMonthEvents={currentMonthEvents}
+            pendingEvents={inProgressEvents}
             categories={categories}
             setViewingEvent={setViewingEvent}
           />
 
-          <section className="space-y-12 pb-20">
+          {/* Tabs Section */}
+          <section className="space-y-8 pb-20">
+            <div className="flex items-center gap-6 border-b border-white/5 pb-4">
+              <button
+                onClick={() => setActiveTab('upcoming')}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-xl transition-all font-semibold",
+                  activeTab === 'upcoming' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5"
+                )}
+              >
+                <RotateCcw size={18} />
+                Próximos
+              </button>
+              <button
+                onClick={() => setActiveTab('inprogress')}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-xl transition-all font-semibold relative",
+                  activeTab === 'inprogress' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5"
+                )}
+              >
+                <AlertCircle size={18} />
+                En curso
+                {inProgressEvents.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-urgent rounded-full animate-pulse" />
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('completed')}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-xl transition-all font-semibold",
+                  activeTab === 'completed' ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5"
+                )}
+              >
+                <CheckCircle2 size={18} />
+                Finalizados
+              </button>
+            </div>
+
             {groupedEvents.length > 0 ? (
               groupedEvents.map(group => (
                 <div key={group.category.id} className="space-y-6">
                   <div className="flex items-center gap-4 px-2">
                     <div className="w-1 h-6 rounded-full" style={{ backgroundColor: group.category.color }} />
-                    <h4 className="text-lg font-bold uppercase">{group.category.name}</h4>
+                    <h4 className="text-xl font-bold tracking-tight">{group.category.name}</h4>
                     <div className="flex-1 h-px bg-white/5" />
                   </div>
 
@@ -219,7 +358,7 @@ export default function App() {
                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 text-white/20">
                   <Calendar size={32} />
                 </div>
-                <p className="text-white/40 font-medium">No hay eventos para mostrar.</p>
+                <p className="text-white/40 font-medium">No hay eventos para mostrar en esta sección.</p>
               </div>
             )}
           </section>
@@ -233,6 +372,8 @@ export default function App() {
           onClose={() => setViewingEvent(null)}
           onEdit={() => { setEditingEvent(viewingEvent); setViewingEvent(null); setIsAddEventOpen(true); }}
           onDelete={() => setDeletingEventId(viewingEvent.id)}
+          onUpdateStatus={handleUpdateStatus}
+          onPostpone={handlePostpone}
         />
       )}
 

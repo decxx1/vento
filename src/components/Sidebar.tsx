@@ -1,4 +1,4 @@
-import { Plus, List, CalendarDays, Menu } from 'lucide-react';
+import { Plus, List, CalendarDays } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
 import { Category } from '../types';
@@ -26,8 +26,11 @@ export function Sidebar({ categories, selectedCategory, setSelectedCategory, onA
             )}
         >
             {/* Sidebar Top: Logo Only (Hamburger moved to Header) */}
-            <div className="inline-flex items-center gap-3 mb-10 px-2 h-10 overflow-hidden">
-                <div className="p-2 bg-primary rounded-xl shadow-lg shadow-primary/20 shrink-0">
+            <div className={cn(
+                "w-full inline-flex items-center mb-10 h-10",
+                !isExpanded ? "" : "gap-3"
+            )}>
+                <div className="px-3 py-3 bg-primary rounded-xl shadow-lg shadow-primary/20 shrink-0">
                     <CalendarDays size={20} />
                 </div>
                 <h1 className={cn(
@@ -42,9 +45,9 @@ export function Sidebar({ categories, selectedCategory, setSelectedCategory, onA
                 <button
                     onClick={() => setSelectedCategory(null)}
                     className={cn(
-                        "w-full inline-flex items-center px-4 py-3 rounded-xl transition-all duration-200 group",
+                        "w-full inline-flex items-center py-3 rounded-xl transition-all duration-200 group",
                         selectedCategory === null ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5",
-                        !isExpanded ? "justify-center px-0" : "gap-3"
+                        !isExpanded ? "justify-center px-0" : "px-4 gap-3"
                     )}
                     title={!isExpanded ? "Todos los eventos" : ""}
                 >
@@ -93,8 +96,8 @@ export function Sidebar({ categories, selectedCategory, setSelectedCategory, onA
                 <button
                     onClick={onAddCategory}
                     className={cn(
-                        "w-full inline-flex items-center px-4 py-3 rounded-xl text-primary hover:bg-primary/10 transition-all border border-dashed border-primary/30 mt-4",
-                        !isExpanded ? "justify-center px-0" : "gap-3"
+                        "w-full inline-flex items-center py-3 rounded-xl text-primary hover:bg-primary/10 transition-all border border-dashed border-primary/30 mt-4",
+                        !isExpanded ? "justify-center px-0" : "px-4 gap-3"
                     )}
                     title={!isExpanded ? "Nueva categoría" : ""}
                 >
