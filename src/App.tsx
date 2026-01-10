@@ -29,6 +29,7 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<number | null>(null);
   const [db, setDb] = useState<any>(null);
+  const [isSidebarLocked, setIsSidebarLocked] = useState(false);
 
   // Initialize DB and Load Data
   useEffect(() => {
@@ -175,10 +176,15 @@ export default function App() {
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
         onAddCategory={() => setIsAddCategoryOpen(true)}
+        isLocked={isSidebarLocked}
       />
 
       <main className="flex-1 flex flex-col relative overflow-hidden">
-        <Header onAddEvent={() => { setEditingEvent(null); setIsAddEventOpen(true); }} />
+        <Header
+          onAddEvent={() => { setEditingEvent(null); setIsAddEventOpen(true); }}
+          isSidebarLocked={isSidebarLocked}
+          setIsSidebarLocked={setIsSidebarLocked}
+        />
 
         <div className="flex-1 overflow-y-auto p-10 space-y-12">
           <Dashboard
