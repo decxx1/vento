@@ -63,22 +63,28 @@ export function EventDetailModal({ event, categories, onClose, onEdit, onDelete 
                             {event.description || "Sin descripción adicional."}
                         </p>
                     </div>
+                    <div className="grid grid-cols-2 gap-3 pt-6">
+                        <button type="button" onClick={onClose} className="w-full px-4 py-4 rounded-xl border border-white/10 hover:bg-white/5 transition-colors font-semibold">
+                            Cancelar
+                        </button>
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={onEdit}
+                                className="flex-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
+                            >
+                                <Edit2 size={22} />
 
-                    <div className="flex gap-4 pt-6">
-                        <button
-                            onClick={onEdit}
-                            className="flex-1 bg-white/5 hover:bg-white/10 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
-                        >
-                            <Edit2 size={18} />
-                            Editar
-                        </button>
-                        <button
-                            onClick={onDelete}
-                            className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
-                        >
-                            <Trash2 size={18} />
-                            Eliminar
-                        </button>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onDelete}
+                                className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
+                            >
+                                <Trash2 size={22} />
+
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

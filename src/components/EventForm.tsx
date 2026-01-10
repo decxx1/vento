@@ -58,15 +58,16 @@ export function EventForm({ categories, initialData, onClose, onSave }: EventFor
                     </select>
                 </div>
             </div>
-            <div className="flex flex-col gap-3 pt-6">
+            <div className="flex justify-between gap-3 pt-6">
+
+                <button onClick={onClose} className="w-full px-4 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors font-semibold">
+                    Cancelar
+                </button>
                 <button
                     onClick={() => onSave({ category_id: Number(catId), title, description: desc, event_date: date })}
                     className="w-full px-4 py-3 rounded-xl bg-primary hover:bg-primary/90 font-bold transition-colors shadow-lg shadow-primary/20"
                 >
                     {initialData ? "Guardar Cambios" : "Crear Evento"}
-                </button>
-                <button onClick={onClose} className="w-full px-4 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors font-semibold">
-                    Cancelar
                 </button>
             </div>
         </div>

@@ -6,9 +6,6 @@ import Database from '@tauri-apps/plugin-sql';
 // Types
 import { Category, Event } from './types';
 
-// Utils
-import { cn } from './lib/utils';
-
 // Components
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -200,7 +197,7 @@ export default function App() {
                 <div key={group.category.id} className="space-y-6">
                   <div className="flex items-center gap-4 px-2">
                     <div className="w-1 h-6 rounded-full" style={{ backgroundColor: group.category.color }} />
-                    <h4 className="text-xl font-bold tracking-tight">{group.category.name}</h4>
+                    <h4 className="text-lg font-bold uppercase">{group.category.name}</h4>
                     <div className="flex-1 h-px bg-white/5" />
                   </div>
 

@@ -12,7 +12,7 @@ interface DashboardProps {
 
 export function Dashboard({ nextEvent, currentMonthEvents, categories, setViewingEvent }: DashboardProps) {
     return (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Next Up Card */}
             <div
                 className="relative overflow-hidden rounded-3xl p-8 glass-card border-white/10 min-h-[220px] flex flex-col justify-between cursor-pointer group"
