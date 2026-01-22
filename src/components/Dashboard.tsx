@@ -52,7 +52,7 @@ export function Dashboard({ nextEvent, currentMonthEvents, currentWeekEvents, pe
             </div>
 
             {/* Middle Card: This Week / Month Toggleable */}
-            <div className="glass-card rounded-3xl p-6 border-white/10 flex flex-col min-h-[220px] lg:min-h-[250px]">
+            <div className="relative glass-card rounded-3xl p-6 border-white/10 flex flex-col min-h-[220px] lg:min-h-[250px]">
                 <div className="flex items-center justify-between mb-4 px-2">
                     <h4 className="text-sm font-bold uppercase tracking-widest text-white/30 truncate">
                         Eventos de {title}
