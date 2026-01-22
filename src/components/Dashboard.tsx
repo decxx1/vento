@@ -59,7 +59,7 @@ export function Dashboard({ nextEvent, currentMonthEvents, currentWeekEvents, pe
                     </h4>
                     <button
                         onClick={() => setViewMode(viewMode === 'week' ? 'month' : 'week')}
-                        className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 rounded-full text-[10px] font-black uppercase tracking-tighter text-white/40 hover:text-white transition-all border border-white/5"
+                        className="absolute top-1 xl:top-2 right-2 flex items-center gap-1.5 px-2 py-1 bg-white/5 hover:bg-white/10 rounded-4xl text-[10px] font-black uppercase tracking-tighter text-white/40 hover:text-white transition-all border border-white/5"
                     >
                         {viewMode === 'week' ? 'Ver Mes' : 'Ver Semana'}
                         <ChevronDown size={12} className={cn("transition-transform", viewMode === 'month' && "rotate-180")} />

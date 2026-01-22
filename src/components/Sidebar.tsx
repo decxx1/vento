@@ -86,7 +86,7 @@ export function Sidebar({ categories, selectedCategory, setSelectedCategory, onA
                                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
                             </div>
                             <span className={cn(
-                                "ml-3 font-medium flex-1 text-left transition-all duration-300 whitespace-nowrap overflow-hidden transition-opacity",
+                                "ml-3 font-medium flex-1 text-left transition-all duration-300 whitespace-nowrap overflow-hidden",
                                 isExpanded ? "w-auto opacity-100" : "w-0 opacity-0"
                             )}>
                                 {cat.name}
