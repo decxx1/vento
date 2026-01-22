@@ -1,17 +1,29 @@
-import { Bell, Calendar, CalendarDays } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { Bell, Calendar, CalendarDays, ChevronDown, Clock, History } from 'lucide-react';
+import { useState } from 'react';
+import { format, parseISO, isBefore, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Category, Event } from '../types';
+import { cn } from '../lib/utils';
 
 interface DashboardProps {
     nextEvent: Event | undefined;
     currentMonthEvents: Event[];
+    currentWeekEvents: Event[];
     pendingEvents: Event[];
     categories: Category[];
     setViewingEvent: (event: Event) => void;
 }
 
-export function Dashboard({ nextEvent, currentMonthEvents, pendingEvents, categories, setViewingEvent }: DashboardProps) {
+export function Dashboard({ nextEvent, currentMonthEvents, currentWeekEvents, pendingEvents, categories, setViewingEvent }: DashboardProps) {
+    const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+
+    const displayEvents = viewMode === 'week' ? currentWeekEvents : currentMonthEvents;
+    const title = viewMode === 'week' ? "Esta semana" : "Este mes";
+
+    const today = startOfDay(new Date());
+    const pastPending = pendingEvents.filter(e => isBefore(parseISO(e.event_date), today));
+    const upcomingPending = pendingEvents.filter(e => !isBefore(parseISO(e.event_date), today));
+
     return (
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Next Up Card */}
@@ -39,43 +51,82 @@ export function Dashboard({ nextEvent, currentMonthEvents, pendingEvents, catego
                 )}
             </div>
 
-            {/* This Month List Card */}
+            {/* Middle Card: This Week / Month Toggleable */}
             <div className="glass-card rounded-3xl p-6 border-white/10 flex flex-col min-h-[220px] lg:min-h-[250px]">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-white/30 mb-4 px-2">Eventos de este mes</h4>
+                <div className="flex items-center justify-between mb-4 px-2">
+                    <h4 className="text-sm font-bold uppercase tracking-widest text-white/30 truncate">
+                        Eventos de {title}
+                    </h4>
+                    <button
+                        onClick={() => setViewMode(viewMode === 'week' ? 'month' : 'week')}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 rounded-full text-[10px] font-black uppercase tracking-tighter text-white/40 hover:text-white transition-all border border-white/5"
+                    >
+                        {viewMode === 'week' ? 'Ver Mes' : 'Ver Semana'}
+                        <ChevronDown size={12} className={cn("transition-transform", viewMode === 'month' && "rotate-180")} />
+                    </button>
+                </div>
                 <div className="flex-1 space-y-3 overflow-y-auto pr-2 max-h-[160px] no-scrollbar">
-                    {currentMonthEvents.length > 0 ? (
-                        currentMonthEvents.map(e => (
+                    {displayEvents.length > 0 ? (
+                        displayEvents.map(e => (
                             <div key={e.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group" onClick={() => setViewingEvent(e)}>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: categories.find(c => c.id === e.category_id)?.color }} />
+                                <div className="flex items-center gap-3 shrink-0 flex-1">
+                                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: categories.find(c => c.id === e.category_id)?.color }} />
                                     <span className="font-medium text-sm truncate max-w-[120px] group-hover:text-primary">{e.title}</span>
                                 </div>
-                                <span className="text-[11px] text-white/40">{format(parseISO(e.event_date), "d MMM", { locale: es })}</span>
+                                <span className="text-[11px] text-white/40 shrink-0">{format(parseISO(e.event_date), "d MMM", { locale: es })}</span>
                             </div>
                         ))
                     ) : (
-                        <p className="text-center text-white/20 py-8 text-sm">Sin eventos este mes</p>
+                        <p className="text-center text-white/20 py-8 text-sm">Sin eventos {title.toLowerCase()}</p>
                     )}
                 </div>
             </div>
 
-            {/* Pending List Card */}
+            {/* In Progress List Card */}
             <div className="glass-card rounded-3xl p-6 border-white/10 flex flex-col min-h-[220px] lg:min-h-[250px] relative">
                 <div className="flex items-center justify-between mb-4 px-2">
                     <h4 className="text-sm font-bold uppercase tracking-widest text-white/30">Eventos En curso</h4>
-                    {pendingEvents.length > 0 && <span className="bg-urgent text-black text-[10px] font-black px-1.5 py-0.5 rounded-md animate-pulse">!</span>}
+                    {pastPending.length > 0 && <span className="bg-urgent text-black text-[10px] font-black px-1.5 py-0.5 rounded-md animate-pulse">!</span>}
                 </div>
-                <div className="flex-1 space-y-3 overflow-y-auto pr-2 max-h-[160px] no-scrollbar">
+                <div className="flex-1 space-y-4 overflow-y-auto pr-2 max-h-[160px] no-scrollbar">
                     {pendingEvents.length > 0 ? (
-                        pendingEvents.map(e => (
-                            <div key={e.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-urgent/10 transition-colors cursor-pointer group border border-transparent hover:border-urgent/20" onClick={() => setViewingEvent(e)}>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-urgent shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-                                    <span className="font-medium text-sm truncate max-w-[120px] group-hover:text-urgent">{e.title}</span>
+                        <>
+                            {upcomingPending.length > 0 && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 px-1 mb-1">
+                                        <Clock size={10} className="text-primary/40" />
+                                        <span className="text-[9px] font-black uppercase tracking-tighter text-white/20">Por ocurrir</span>
+                                    </div>
+                                    {upcomingPending.map(e => (
+                                        <div key={e.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-primary/10 transition-colors cursor-pointer group border border-transparent hover:border-primary/20" onClick={() => setViewingEvent(e)}>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+                                                <span className="font-medium text-sm truncate max-w-[120px] group-hover:text-primary">{e.title}</span>
+                                            </div>
+                                            <span className="text-[11px] text-primary/60">{format(parseISO(e.event_date), "d MMM", { locale: es })}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                                <span className="text-[11px] text-urgent/60">{format(parseISO(e.event_date), "d MMM", { locale: es })}</span>
-                            </div>
-                        ))
+                            )}
+
+                            {pastPending.length > 0 && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 px-1 mb-1">
+                                        <History size={10} className="text-urgent/40" />
+                                        <span className="text-[9px] font-black uppercase tracking-tighter text-white/20">Pasados</span>
+                                    </div>
+                                    {pastPending.map(e => (
+                                        <div key={e.id} className="flex items-center justify-between p-3 rounded-xl bg-urgent/5 hover:bg-urgent/10 transition-colors cursor-pointer group border border-transparent hover:border-urgent/20" onClick={() => setViewingEvent(e)}>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-urgent shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+                                                <span className="font-medium text-sm truncate max-w-[120px] group-hover:text-urgent">{e.title}</span>
+                                            </div>
+                                            <span className="text-[11px] text-urgent/60">{format(parseISO(e.event_date), "d MMM", { locale: es })}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <p className="text-center text-white/20 py-8 text-sm">Nada en curso</p>
                     )}

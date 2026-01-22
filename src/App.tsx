@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X, Calendar, CheckCircle2, RotateCcw, AlertCircle } from 'lucide-react';
-import { addDays, addMonths, addYears, startOfMonth, endOfMonth, isWithinInterval, parseISO, isBefore, startOfDay } from 'date-fns';
+import { addDays, addMonths, addYears, startOfMonth, endOfMonth, isWithinInterval, parseISO, isBefore, startOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import Database from '@tauri-apps/plugin-sql';
 import { cn } from './lib/utils'; // Assuming cn utility is available
 
@@ -16,6 +16,7 @@ import { CategoryForm } from './components/CategoryForm';
 import { EventForm } from './components/EventForm';
 import { EventDetailModal } from './components/EventDetailModal';
 import { DeleteConfirmationModal } from './components/DeleteConfirmationModal';
+import { DeleteCategoryModal } from './components/DeleteCategoryModal';
 
 export default function App() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -27,6 +28,7 @@ export default function App() {
   const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<number | null>(null);
+  const [deletingCategoryId, setDeletingCategoryId] = useState<number | null>(null);
   const [db, setDb] = useState<any>(null);
   const [isSidebarLocked, setIsSidebarLocked] = useState(false);
 
@@ -154,6 +156,15 @@ export default function App() {
     });
   }, [dashboardEvents]);
 
+  const currentWeekEvents = useMemo(() => {
+    const start = startOfWeek(new Date(), { weekStartsOn: 1 }); // Monday
+    const end = endOfWeek(new Date(), { weekStartsOn: 1 });
+    return dashboardEvents.filter(e => {
+      const date = parseISO(e.event_date);
+      return isWithinInterval(date, { start, end });
+    });
+  }, [dashboardEvents]);
+
   const currentTabEvents = useMemo(() => {
     let filtered: Event[] = [];
     if (activeTab === 'upcoming') filtered = upcomingEvents;
@@ -220,7 +231,8 @@ export default function App() {
     if (!event) return;
 
     let finalStatus = status;
-    // If reactivating or activating, recalculate based on date
+    // Only recalculate based on date if we are explicitly trying to set it to 'normal'
+    // This allows manual overrides to 'pending' from the UI
     if (status === 'normal') {
       finalStatus = calculateStatus(event.event_date, false);
     }
@@ -267,6 +279,25 @@ export default function App() {
     setDeletingEventId(null);
   };
 
+  const handleDeleteCategory = async () => {
+    if (!deletingCategoryId) return;
+    if (db) {
+      await db.execute("DELETE FROM events WHERE category_id = ?", [deletingCategoryId]);
+      await db.execute("DELETE FROM categories WHERE id = ?", [deletingCategoryId]);
+      loadData(db);
+    } else {
+      setEvents(events.filter(e => e.category_id !== deletingCategoryId));
+      setCategories(categories.filter(c => c.id !== deletingCategoryId));
+    }
+    if (selectedCategory === deletingCategoryId) {
+      setSelectedCategory(null);
+    }
+    setDeletingCategoryId(null);
+  };
+
+  const categoryToDelete = categories.find(c => c.id === deletingCategoryId);
+  const eventsInCategoryCount = events.filter(e => e.category_id === deletingCategoryId).length;
+
   return (
     <div className="flex h-screen w-full bg-background text-white font-sans overflow-hidden">
       <Sidebar
@@ -274,6 +305,7 @@ export default function App() {
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
         onAddCategory={() => setIsAddCategoryOpen(true)}
+        onDeleteCategory={(id) => setDeletingCategoryId(id)}
         isLocked={isSidebarLocked}
       />
 
@@ -288,6 +320,7 @@ export default function App() {
           <Dashboard
             nextEvent={nextEvent}
             currentMonthEvents={currentMonthEvents}
+            currentWeekEvents={currentWeekEvents}
             pendingEvents={inProgressEvents}
             categories={categories}
             setViewingEvent={setViewingEvent}
@@ -413,6 +446,15 @@ export default function App() {
         <DeleteConfirmationModal
           onCancel={() => setDeletingEventId(null)}
           onConfirm={handleDeleteEvent}
+        />
+      )}
+
+      {deletingCategoryId && categoryToDelete && (
+        <DeleteCategoryModal
+          categoryName={categoryToDelete.name}
+          eventCount={eventsInCategoryCount}
+          onCancel={() => setDeletingCategoryId(null)}
+          onConfirm={handleDeleteCategory}
         />
       )}
     </div>

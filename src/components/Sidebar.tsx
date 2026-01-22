@@ -1,4 +1,4 @@
-import { Plus, List, CalendarDays } from 'lucide-react';
+import { Plus, List, CalendarDays, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
 import { Category } from '../types';
@@ -8,10 +8,11 @@ interface SidebarProps {
     selectedCategory: number | null;
     setSelectedCategory: (id: number | null) => void;
     onAddCategory: () => void;
+    onDeleteCategory: (id: number) => void;
     isLocked: boolean;
 }
 
-export function Sidebar({ categories, selectedCategory, setSelectedCategory, onAddCategory, isLocked }: SidebarProps) {
+export function Sidebar({ categories, selectedCategory, setSelectedCategory, onAddCategory, onDeleteCategory, isLocked }: SidebarProps) {
     const [isHovered, setIsHovered] = useState(false);
 
     const isExpanded = isLocked || isHovered;
@@ -72,25 +73,39 @@ export function Sidebar({ categories, selectedCategory, setSelectedCategory, onA
                 {!isExpanded && <div className="h-px bg-white/5 my-2 mx-2" />}
 
                 {categories.map(cat => (
-                    <button
-                        key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={cn(
-                            "w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 group",
-                            selectedCategory === cat.id ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
+                    <div key={cat.id} className="relative group/cat">
+                        <button
+                            onClick={() => setSelectedCategory(cat.id)}
+                            className={cn(
+                                "w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200",
+                                selectedCategory === cat.id ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
+                            )}
+                            title={!isExpanded ? cat.name : ""}
+                        >
+                            <div className="shrink-0 flex items-center justify-center w-[20px]">
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                            </div>
+                            <span className={cn(
+                                "ml-3 font-medium flex-1 text-left transition-all duration-300 whitespace-nowrap overflow-hidden transition-opacity",
+                                isExpanded ? "w-auto opacity-100" : "w-0 opacity-0"
+                            )}>
+                                {cat.name}
+                            </span>
+                        </button>
+
+                        {isExpanded && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteCategory(cat.id);
+                                }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-white/10 hover:text-red-500 hover:bg-red-500/10 rounded-lg opacity-0 group-hover/cat:opacity-100 transition-all"
+                                title="Eliminar categoría"
+                            >
+                                <Trash2 size={14} />
+                            </button>
                         )}
-                        title={!isExpanded ? cat.name : ""}
-                    >
-                        <div className="shrink-0 flex items-center justify-center w-[20px]">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                        </div>
-                        <span className={cn(
-                            "ml-3 font-medium flex-1 text-left transition-all duration-300 whitespace-nowrap overflow-hidden",
-                            isExpanded ? "w-auto opacity-100" : "w-0 opacity-0"
-                        )}>
-                            {cat.name}
-                        </span>
-                    </button>
+                    </div>
                 ))}
 
                 <button

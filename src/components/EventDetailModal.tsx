@@ -122,6 +122,13 @@ export function EventDetailModal({ event, categories, onClose, onEdit, onDelete,
                                     <CheckCircle2 size={14} />
                                     Finalizar Evento
                                 </button>
+                                <button
+                                    onClick={() => onUpdateStatus(event.id, 'normal' as EventStatus)}
+                                    className="w-full bg-white/5 hover:bg-white/10 text-white/40 text-[10px] font-bold py-2 rounded-lg transition-all flex items-center justify-center gap-2 border border-white/5"
+                                >
+                                    <RotateCcw size={12} />
+                                    Regresar a Próximos
+                                </button>
                             </div>
                         </div>
                     )}
@@ -130,13 +137,22 @@ export function EventDetailModal({ event, categories, onClose, onEdit, onDelete,
                     <div className="space-y-4 pt-4">
                         <div className="flex gap-3">
                             {!isCompleted && !isPending && (
-                                <button
-                                    onClick={() => onUpdateStatus(event.id, 'completed' as EventStatus)}
-                                    className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
-                                >
-                                    <CheckCircle2 size={18} />
-                                    Finalizar
-                                </button>
+                                <>
+                                    <button
+                                        onClick={() => onUpdateStatus(event.id, 'pending' as EventStatus)}
+                                        className="flex-1 bg-urgent/10 hover:bg-urgent/20 text-urgent font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
+                                    >
+                                        <AlertCircle size={18} />
+                                        En curso
+                                    </button>
+                                    <button
+                                        onClick={() => onUpdateStatus(event.id, 'completed' as EventStatus)}
+                                        className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
+                                    >
+                                        <CheckCircle2 size={18} />
+                                        Finalizar
+                                    </button>
+                                </>
                             )}
                             {isCompleted && (
                                 <button
