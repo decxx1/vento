@@ -47,7 +47,7 @@ export function EventCard({ event, onClick }: EventCardProps) {
                     "px-3 py-1 rounded-full text-[11px] font-bold uppercase border whitespace-nowrap self-start",
                     isDeactivated ? "bg-white/5 border-white/10 text-white/20" : getProximityColor(event.event_date)
                 )}>
-                    {format(parseISO(event.event_date), "d MMM", { locale: es })}
+                    {format(parseISO(event.event_date), "d/MM/yy", { locale: es })}
                 </span>
             </div>
         </div>

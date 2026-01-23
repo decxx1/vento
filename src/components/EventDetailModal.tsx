@@ -66,7 +66,7 @@ export function EventDetailModal({ event, categories, onClose, onEdit, onDelete,
                             </div>
                             <div>
                                 <p className="text-[10px] uppercase text-white/30 font-bold">Fecha</p>
-                                <p className="font-semibold capitalize">{format(parseISO(event.event_date), "eeee d 'de' MMMM, yyyy", { locale: es })}</p>
+                                <p className="font-semibold capitalize">{format(parseISO(event.event_date), "d 'de' MMMM, yyyy", { locale: es })}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
